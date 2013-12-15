@@ -121,7 +121,7 @@ function simple_pages_display_breadcrumbs($pageId = null, $seperator=' > ', $inc
         $pageLinks[] = '<a href="'. public_url('') . '">' . __('Home') . '</a>';
 
         // create the bread crumb
-        $html .= implode(html_escape($seperator), array_reverse($pageLinks));
+        $html .= implode($seperator, array_reverse($pageLinks));
     }
     return $html;
 }
@@ -130,7 +130,7 @@ function simple_pages_display_hierarchy($parentPageId = 0, $partialFilePath = 'i
 {
     $html = '';
     $childrenPages = get_db()->getTable('SimplePagesPage')->findChildrenPages($parentPageId);
-    if (count($childrenPages)) {        
+    if (count($childrenPages)) {
         $html .= '<ul>';
         foreach($childrenPages as $childPage) {
             $html .= '<li>';

@@ -12,34 +12,34 @@
  * @package SimplePages
  */
 class SimplePages_IndexController extends Omeka_Controller_AbstractActionController
-{    
+{
     public function init()
     {
-        // Set the model class so this controller can perform some functions, 
+        // Set the model class so this controller can perform some functions,
         // such as $this->findById()
         $this->_helper->db->setDefaultModelName('SimplePagesPage');
     }
-    
+
     public function indexAction()
     {
         // Always go to browse.
         $this->_helper->redirector('browse');
         return;
     }
-    
+
     public function addAction()
     {
         // Create a new page.
         $page = new SimplePagesPage;
-        
+
         // Set the created by user ID.
         $page->created_by_user_id = current_user()->id;
         $page->template = '';
-        $page->order = 0;        
-        $this->view->form = $this->_getForm($page);        
+        $page->order = 0;
+        $this->view->form = $this->_getForm($page);
         $this->_processPageForm($page, 'add');
     }
-    
+
     public function editAction()
     {
         // Get the requested page.
@@ -47,14 +47,14 @@ class SimplePages_IndexController extends Omeka_Controller_AbstractActionControl
         $this->view->form = $this->_getForm($page);
         $this->_processPageForm($page, 'edit');
     }
-    
+
     protected function _getForm($page = null)
-    { 
+    {
         $formOptions = array('type' => 'simple_pages_page', 'hasPublicPage' => true);
         if ($page && $page->exists()) {
             $formOptions['record'] = $page;
         }
-        
+
         $form = new Omeka_Form_Admin($formOptions);
         $form->addElementToEditGroup(
             'text', 'title',
@@ -66,7 +66,7 @@ class SimplePages_IndexController extends Omeka_Controller_AbstractActionControl
                 'required' => true
             )
         );
-        
+
         $form->addElementToEditGroup(
             'text', 'slug',
             array(
@@ -81,7 +81,7 @@ class SimplePages_IndexController extends Omeka_Controller_AbstractActionControl
                 )
             )
         );
-        
+
         $form->addElementToEditGroup(
             'checkbox', 'use_tiny_mce',
             array(
@@ -96,7 +96,7 @@ class SimplePages_IndexController extends Omeka_Controller_AbstractActionControl
                 )
             )
         );
-         
+
         $form->addElementToEditGroup(
             'textarea', 'text',
             array('id' => 'simple-pages-text',
@@ -110,7 +110,7 @@ class SimplePages_IndexController extends Omeka_Controller_AbstractActionControl
                 )
             )
         );
-        
+
         $form->addElementToSaveGroup(
             'select', 'parent_id',
             array(
@@ -121,7 +121,7 @@ class SimplePages_IndexController extends Omeka_Controller_AbstractActionControl
                 'description' => __('The parent page')
             )
         );
-        
+
         $form->addElementToSaveGroup(
             'text', 'order',
             array(
@@ -133,7 +133,7 @@ class SimplePages_IndexController extends Omeka_Controller_AbstractActionControl
                 )
             )
         );
-        
+
         $form->addElementToSaveGroup(
             'checkbox', 'is_published',
             array(
@@ -144,18 +144,29 @@ class SimplePages_IndexController extends Omeka_Controller_AbstractActionControl
                 'description' => __('Checking this box will make the page public')
             )
         );
-        
+
+        $form->addElementToSaveGroup(
+            'checkbox', 'is_searchable',
+            array(
+                'id' => 'simple_pages_is_searchable',
+                'values' => array(1, 0),
+                'checked' => $page->is_searchable,
+                'label' => __('Is this page searchable?'),
+                'description' => __('Checking this box will make this page searchable')
+            )
+        );
+
         return $form;
     }
-    
+
     /**
      * Process the page edit and edit forms.
      */
     private function _processPageForm($page, $action)
     {
         if ($this->getRequest()->isPost()) {
-            // Attempt to save the form if there is a valid POST. If the form 
-            // is successfully saved, set the flash message, unset the POST, 
+            // Attempt to save the form if there is a valid POST. If the form
+            // is successfully saved, set the flash message, unset the POST,
             // and redirect to the browse action.
             try {
                 $page->setPostData($_POST);
@@ -165,7 +176,7 @@ class SimplePages_IndexController extends Omeka_Controller_AbstractActionControl
                     } else if ('edit' == $action) {
                         $this->_helper->flashMessenger(__('The page "%s" has been edited.', $page->title), 'success');
                     }
-                    
+
                     $this->_helper->redirector('browse');
                     return;
                 }

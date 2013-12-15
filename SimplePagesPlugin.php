@@ -26,7 +26,7 @@ class SimplePagesPlugin extends Omeka_Plugin_AbstractPlugin
     protected $_filters = array('admin_navigation_main',
         'public_navigation_main', 'search_record_types', 'page_caching_whitelist',
         'page_caching_blacklist_for_record',
-	'api_resources');
+        'api_resources');
 
     /**
      * @var array Options and their default values.
@@ -48,6 +48,7 @@ class SimplePagesPlugin extends Omeka_Plugin_AbstractPlugin
           `modified_by_user_id` int(10) unsigned NOT NULL,
           `created_by_user_id` int(10) unsigned NOT NULL,
           `is_published` tinyint(1) NOT NULL,
+          `is_searchable` tinyint(1) NOT NULL,
           `title` tinytext COLLATE utf8_unicode_ci NOT NULL,
           `slug` tinytext COLLATE utf8_unicode_ci NOT NULL,
           `text` text COLLATE utf8_unicode_ci,
@@ -67,12 +68,13 @@ class SimplePagesPlugin extends Omeka_Plugin_AbstractPlugin
           KEY `parent_id` (`parent_id`)
         ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
         $db->query($sql);
-        
+
         // Save an example page.
         $page = new SimplePagesPage;
         $page->modified_by_user_id = current_user()->id;
         $page->created_by_user_id = current_user()->id;
         $page->is_published = 1;
+        $page->is_searchable = 1;
         $page->parent_id = 0;
         $page->title = 'About';
         $page->slug = 'about';
@@ -86,7 +88,7 @@ class SimplePagesPlugin extends Omeka_Plugin_AbstractPlugin
      * Uninstall the plugin.
      */
     public function hookUninstall()
-    {        
+    {
         // Drop the table.
         $db = $this->_db;
         $sql = "DROP TABLE IF EXISTS `$db->SimplePagesPage`";
@@ -105,38 +107,38 @@ class SimplePagesPlugin extends Omeka_Plugin_AbstractPlugin
         $oldVersion = $args['old_version'];
         $newVersion = $args['new_version'];
         $db = $this->_db;
-        
+
         if ($oldVersion < '1.0') {
             $sql = "ALTER TABLE `$db->SimplePagesPage` ADD INDEX ( `is_published` )";
-            $db->query($sql);    
-            
+            $db->query($sql);
+
             $sql = "ALTER TABLE `$db->SimplePagesPage` ADD INDEX ( `inserted` ) ";
-            $db->query($sql);    
-            
+            $db->query($sql);
+
             $sql = "ALTER TABLE `$db->SimplePagesPage` ADD INDEX ( `updated` ) ";
-            $db->query($sql);    
-            
+            $db->query($sql);
+
             $sql = "ALTER TABLE `$db->SimplePagesPage` ADD INDEX ( `add_to_public_nav` ) ";
-            $db->query($sql);    
-            
+            $db->query($sql);
+
             $sql = "ALTER TABLE `$db->SimplePagesPage` ADD INDEX ( `created_by_user_id` ) ";
-            $db->query($sql);    
-            
+            $db->query($sql);
+
             $sql = "ALTER TABLE `$db->SimplePagesPage` ADD INDEX ( `modified_by_user_id` ) ";
-            $db->query($sql);    
-            
+            $db->query($sql);
+
             $sql = "ALTER TABLE `$db->SimplePagesPage` ADD `order` INT UNSIGNED NOT NULL ";
             $db->query($sql);
-            
+
             $sql = "ALTER TABLE `$db->SimplePagesPage` ADD INDEX ( `order` ) ";
             $db->query($sql);
-            
+
             $sql = "ALTER TABLE `$db->SimplePagesPage` ADD `parent_id` INT UNSIGNED NOT NULL ";
             $db->query($sql);
-            
+
             $sql = "ALTER TABLE `$db->SimplePagesPage` ADD INDEX ( `parent_id` ) ";
             $db->query($sql);
-            
+
             $sql = "ALTER TABLE `$db->SimplePagesPage` ADD `template` TINYTEXT CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL ";
             $db->query($sql);
         }
@@ -150,6 +152,16 @@ class SimplePagesPlugin extends Omeka_Plugin_AbstractPlugin
             $db->query("ALTER TABLE `$db->SimplePagesPage` DROP `add_to_public_nav`");
             delete_option('simple_pages_home_page_id');
         }
+        if ($oldVersion < '2.2') {
+            $sql = "
+                ALTER TABLE `$db->SimplePagesPage`
+                ADD `is_searchable` tinyint(1) NOT NULL AFTER `is_published`
+            ";
+            $db->query($sql);
+            // Set all existing pages as searchable.
+            $sql = "UPDATE `$db->SimplePagesPage` SET `is_searchable` = '1';";
+            $db->query($sql);
+        }
     }
 
     /**
@@ -162,13 +174,13 @@ class SimplePagesPlugin extends Omeka_Plugin_AbstractPlugin
 
     /**
      * Define the ACL.
-     * 
+     *
      * @param Omeka_Acl
      */
     public function hookDefineAcl($args)
     {
         $acl = $args['acl'];
-        
+
         $indexResource = new Zend_Acl_Resource('SimplePages_Index');
         $pageResource = new Zend_Acl_Resource('SimplePages_Page');
         $acl->add($indexResource);
@@ -181,7 +193,7 @@ class SimplePagesPlugin extends Omeka_Plugin_AbstractPlugin
 
     /**
      * Add the routes for accessing simple pages by slug.
-     * 
+     *
      * @param Zend_Controller_Router_Rewrite $router
      */
     public function hookDefineRoutes($args)
@@ -197,13 +209,13 @@ class SimplePagesPlugin extends Omeka_Plugin_AbstractPlugin
         $pages = get_db()->getTable('SimplePagesPage')->findAll();
         foreach ($pages as $page) {
             $router->addRoute(
-                'simple_pages_show_page_' . $page->id, 
+                'simple_pages_show_page_' . $page->id,
                 new Zend_Controller_Router_Route(
-                    $page->slug, 
+                    $page->slug,
                     array(
-                        'module'       => 'simple-pages', 
-                        'controller'   => 'page', 
-                        'action'       => 'show', 
+                        'module'       => 'simple-pages',
+                        'controller'   => 'page',
+                        'action'       => 'show',
                         'id'           => $page->id
                     )
                 )
@@ -228,10 +240,10 @@ class SimplePagesPlugin extends Omeka_Plugin_AbstractPlugin
     }
 
     /**
-     * Filter the 'text' field of the simple-pages form, but only if the 
+     * Filter the 'text' field of the simple-pages form, but only if the
      * 'simple_pages_filter_page_content' setting has been enabled from within the
      * configuration form.
-     * 
+     *
      * @param array $args Hook args, contains:
      *  'request': Zend_Controller_Request_Http
      *  'purifier': HTMLPurifier
@@ -245,20 +257,20 @@ class SimplePagesPlugin extends Omeka_Plugin_AbstractPlugin
         if ($request->getModuleName() != 'simple-pages' or !in_array($request->getActionName(), array('edit', 'add'))) {
             return;
         }
-        
+
         // Do not filter HTML for the request unless this configuration directive is on.
         if (!get_option('simple_pages_filter_page_content')) {
             return;
         }
-        
+
         $post = $request->getPost();
-        $post['text'] = $purifier->purify($post['text']); 
+        $post['text'] = $purifier->purify($post['text']);
         $request->setPost($post);
     }
 
     /**
      * Add the Simple Pages link to the admin main navigation.
-     * 
+     *
      * @param array Navigation array.
      * @return array Filtered navigation array.
      */
@@ -275,7 +287,7 @@ class SimplePagesPlugin extends Omeka_Plugin_AbstractPlugin
 
     /**
      * Add the pages to the public main navigation options.
-     * 
+     *
      * @param array Navigation array.
      * @return array Filtered navigation array.
      */
@@ -297,9 +309,9 @@ class SimplePagesPlugin extends Omeka_Plugin_AbstractPlugin
 
     /**
      * Specify the default list of urls to whitelist
-     * 
-     * @param $whitelist array An associative array urls to whitelist, 
-     * where the key is a regular expression of relative urls to whitelist 
+     *
+     * @param $whitelist array An associative array urls to whitelist,
+     * where the key is a regular expression of relative urls to whitelist
      * and the value is an array of Zend_Cache front end settings
      * @return array The whitelist
      */
@@ -310,15 +322,15 @@ class SimplePagesPlugin extends Omeka_Plugin_AbstractPlugin
         foreach($pages as $page) {
             $whitelist['/' . trim($page->slug, '/')] = array('cache'=>true);
         }
-            
+
         return $whitelist;
     }
 
     /**
      * Add pages to the blacklist
-     * 
-     * @param $blacklist array An associative array urls to blacklist, 
-     * where the key is a regular expression of relative urls to blacklist 
+     *
+     * @param $blacklist array An associative array urls to blacklist,
+     * where the key is a regular expression of relative urls to blacklist
      * and the value is an array of Zend_Cache front end settings
      * @param $record
      * @param $args Filter arguments. contains:
@@ -337,15 +349,15 @@ class SimplePagesPlugin extends Omeka_Plugin_AbstractPlugin
                 $blacklist['/' . trim($page->slug, '/')] = array('cache'=>false);
             }
         }
-            
+
         return $blacklist;
     }
     public function filterApiResources($apiResources)
     {
-	$apiResources['simple_pages'] = array(
-		'record_type' => 'SimplePagesPage',
-		'actions'   => array('get','index'),
-	);	
+        $apiResources['simple_pages'] = array(
+            'record_type' => 'SimplePagesPage',
+            'actions'   => array('get','index'),
+        );
        return $apiResources;
     }
 }
