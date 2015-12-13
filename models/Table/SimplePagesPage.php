@@ -85,11 +85,12 @@ class Table_SimplePagesPage extends Omeka_Db_Table
             // get all of the descendant pages of the parent page
         	$childrenPages = $parentToChildrenLookup[$parentId];
         	$descendantPages = array_merge($descendantPages, $childrenPages);
-    	    foreach ( $childrenPages as $childPage ) {
-    			if ( $allGrandChildren = $this->findChildrenPages($childPage->id, true, $idToPageLookup, $parentToChildrenLookup) ) {
-    			    $descendantPages = array_merge($descendantPages, $allGrandChildren);
-    			}
-        	}
+            foreach ( $childrenPages as $childPage ) {
+                $allGrandChildren = $this->findChildrenPages($childPage->id, true, $idToPageLookup, $parentToChildrenLookup);
+                if ($allGrandChildren) {
+                    $descendantPages = array_merge($descendantPages, $allGrandChildren);
+		}
+            }
         } else {
             // only include the immediate children
             $descendantPages = $this->findBy(array('parent_id'=>$parentId, 'sort'=>'order'));
@@ -174,8 +175,9 @@ class Table_SimplePagesPage extends Omeka_Db_Table
 
         // create a page lookup table for all of the pages
         $page = $this->find($pageId);
-        while($page && $page->parent_id) {
-            if ($page = $this->find($page->parent_id)) {
+        while ($page && $page->parent_id) {
+            $page = $this->find($page->parent_id);
+            if ($page) {
                 $ancestorPages[] = $page;
             }
         }
