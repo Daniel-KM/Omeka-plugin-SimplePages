@@ -48,7 +48,7 @@ class SimplePagesPlugin extends Omeka_Plugin_AbstractPlugin
           `modified_by_user_id` int(10) unsigned NOT NULL,
           `created_by_user_id` int(10) unsigned NOT NULL,
           `is_published` tinyint(1) NOT NULL,
-          `is_searchable` tinyint(1) NOT NULL,
+          `is_searchable` tinyint(1) NOT NULL DEFAULT 1,
           `title` tinytext COLLATE utf8_unicode_ci NOT NULL,
           `slug` tinytext COLLATE utf8_unicode_ci NOT NULL,
           `text` mediumtext COLLATE utf8_unicode_ci,
@@ -175,6 +175,10 @@ class SimplePagesPlugin extends Omeka_Plugin_AbstractPlugin
 
         if ($oldVersion < '3.0.7') {
             $db->query("ALTER TABLE `$db->SimplePagesPage` ALTER `inserted` SET DEFAULT '2000-01-01 00:00:00'");
+        }
+
+        if ($oldVersion < '3.0.8') {
+            $db->query("ALTER TABLE `$db->SimplePagesPage` ALTER `is_searchable` SET DEFAULT 1");
         }
     }
 
