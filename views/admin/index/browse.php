@@ -1,5 +1,6 @@
 <?php
-$currentView = isset($_GET['view']) && $_GET['view'] == 'hierarchy' ? 'hierarchy' : 'list';
+// The hierarchy view is displayed by default.
+$currentView = isset($_GET['view']) && $_GET['view'] == 'list' ? 'list' : 'hierarchy';
 
 queue_css_file('simple-pages', 'screen');
 queue_js_file(array('vendor/jquery.nestedSortable', 'simple-pages'));
