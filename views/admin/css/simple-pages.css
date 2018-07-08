@@ -1,3 +1,6 @@
+.mce-menubar .mce-menubtn.mce-active {
+    z-index: 65534 !important;
+}
 .simplepages-list {
     padding: 0;
     margin: 0;
